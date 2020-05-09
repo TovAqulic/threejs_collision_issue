@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+</head>
+<body>
+<footer id="footer"></footer>
+
+<script src="three.min.js.r116.1"></script>
+<script>
+    var maze = {width: 6, depth: 6, cellSize: 500};
+    var scene, camera, renderer, center, raycaster;
+    var geometries = [];
+    var mouseX = 0;
+    var angleX = 0;
+    var windowHalfX = window.innerWidth / 2;
+    var incrementoX = Math.PI/(windowHalfX);
+    init();
+    requestAnimationFrame(animate);
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if(mouseIsInside && mouseX<=100) angleX-=incrementoX*10;
+        if(mouseIsInside && mouseX>=windowHalfX*2-100) angleX+=incrementoX*10;
+        center.x = windowHalfX*32*Math.cos(angleX);
+        center.z = windowHalfX*32*Math.sin(angleX);
+        camera.lookAt(center);
+        renderer.render(scene, camera);
+    }
+
+    function init() {  
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.position.x = 2000;
+        camera.position.z = 1000;
+        camera.lookAt(new THREE.Vector3(1000, 0, 1000));
+        center = new THREE.Vector3(camera.position.x+250, 0, 0);
+        var wallGeometry = new THREE.CubeGeometry(maze.cellSize, maze.cellSize, maze.cellSize, 1, 1, 1);
+        var wallMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00, wireframe: true, side: THREE.DoubleSide});
+        for(var i=0; i<maze.width; i++){       
+            for(var j=0; j<maze.depth; j++){
+                if(i===0 || i===maze.width-1 || j===0 || j===maze.depth-1){
+                    var wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+                    wallMesh.position.x = j*maze.cellSize;
+                    wallMesh.position.z = i*maze.cellSize;
+                    scene.add(wallMesh);
+                    geometries.push(wallMesh);
+                }
+            }
+        }
+        var cubeMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+        cubeMesh.position.x = 1000;
+        cubeMesh.position.z = 1000;
+        scene.add(cubeMesh);
+        geometries.push(cubeMesh);
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight*.75);
+        document.body.insertBefore(renderer.domElement, document.getElementById("footer"));
+        renderer.render(scene, camera);
+        document.addEventListener('mousemove', onDocumentMouseMove, false);
+        document.addEventListener('keydown', onDocumentKeyDown, false);
+        renderer.domElement.addEventListener('mouseleave', onMouseLeave, false);
+        renderer.domElement.addEventListener('mouseenter', onMouseEnter, false);
+        raycaster = new THREE.Raycaster();
+        raycaster.far = 100;
+    };
+
+    function onDocumentMouseMove(e) {
+        difference = mouseX-e.clientX;
+        angleX-=incrementoX*difference;
+        mouseX = e.clientX;
+        if(mouseX<=windowHalfX-100&&difference>0) angleX-=incrementoX*5;
+        if(mouseX>=windowHalfX+100&&difference<0) angleX+=incrementoX*5;
+        e.preventDefault();
+    };
+    var mouseIsInside = true;
+    function onMouseLeave(e) {
+        mouseIsInside = false;
+    }
+    function onMouseEnter(e) {
+        mouseIsInside = true;
+    }
+
+    var movement;
+    function onDocumentKeyDown(e){
+        movement = 0;
+        var keyCode = e.which||e.keyCode;
+        if(keyCode == 38) movement = "forward";
+        else if(keyCode == 37) movement = "left";
+        else if(keyCode == 39) movement = "right";
+        else if(keyCode == 40) movement = "backward";
+        if(movement!=0) moveAround();
+    }
+
+    var oldCamera;
+    function moveAround(){
+        oldCamera = camera.clone();
+        if(movement=="forward") camera.translateZ(-30);
+        if(movement=="left") camera.translateX(-30);
+        if(movement=="backward") camera.translateZ(30);
+        if(movement=="right") camera.translateX(30);
+        raycaster.set(camera.position, oldCamera.position.normalize());
+        if(raycaster.intersectObjects(geometries).length>0){    
+            if(movement=="forward") camera.translateZ(30);
+            if(movement=="left") camera.translateX(30);
+            if(movement=="backward") camera.translateZ(-30);
+            if(movement=="right") camera.translateX(-30);
+        }
+    };
+    </script>
+</body>
+</html>
